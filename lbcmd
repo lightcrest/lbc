@@ -1,0 +1,185 @@
+#!/bin/bash
+
+_INTERACTIVE=true
+_DEBUG=true
+
+set -uo pipefail
+set -o privileged
+set -o noglob
+set -o errtrace
+set -e
+
+_err_report () {
+    err_status=$1
+    trap - ERR
+
+    cat 1>&2 <<EOF
+problem executing commands:
+EOF
+
+    local i=0
+    while caller $i 1>&2; do
+	((i += 1))
+    done
+    exit $err_status
+}
+
+trap '_err_report $?' ERR
+
+IFS=$'\n'
+
+_EXIT_FUNCS=()
+
+_exit_cascade () {
+    local i
+    for (( i = ${#_EXIT_FUNCS[@]} - 1 ; i >= 0 ; i-- )) ; do
+	${_EXIT_FUNCS[$i]}
+    done
+}
+
+trap '_exit_cascade' EXIT
+
+# Start off with logging going to stderr.
+_LOGFD=2
+
+log::cmd () {
+    local ret
+
+    ret=0
+    log::info "running command: $*"
+    "$@" >&${_LOGFD} 2>&1 || ret=$?
+
+    log::debug "return value was $ret"
+    return $ret
+}
+
+log::debug () {
+    $_DEBUG || return 0
+    echo DEBUG: $* >&${_LOGFD}
+    true
+}
+
+log::warning () {
+    echo ERROR: $* >&${_LOGFD}
+}
+
+log::error () {
+    echo ERROR: $* >&${_LOGFD}
+}
+
+log::info () {
+    echo INFO: $* >&${_LOGFD}
+}
+
+_bail () {
+    log::info "bailing..."
+    exit 0
+}
+
+panic () {
+    echo PANIC: $* >&${_LOGFD}
+    echo PANIC $* >&2
+
+    _bail
+}
+
+_TEMPDIR=$(mktemp -d)
+log::debug "Temp directory is '$_TEMPDIR'..."
+
+_cleanup_tempdir () {
+    $_DEBUG && return
+    [[ -d "$_TEMPDIR" ]] || return 0
+    rm -rf $_TEMPDIR
+}
+
+_EXIT_FUNCS+=(_cleanup_tempdir)
+
+export _CONFIGDIR="$(pwd)"
+export LBCMDDIR="$(dirname $0)"
+
+# No arguments?  Run interactively.
+if [[ ${#} -lt 1 ]] ; then
+    exec bash --noprofile --rcfile $LBCMDDIR/interactive.bash -i
+fi
+
+
+# Run the requested command.
+cmd=$1 ; shift
+
+if [[ $cmd != help ]] ; then
+    hosts=()
+    active=""
+
+    if [[ -f config.bash ]] ; then
+        . config.bash
+    else
+        log::warning "No local configuration file found."
+    fi
+
+fi
+
+log::debug "Running '$cmd'..."
+
+help () {
+cat <<EOF
+$0 [cmd]
+
+Available commands are:
+    - help	request this help
+    - status	display load balancer status
+EOF
+}
+
+_ssh () {
+    log::cmd ssh "${@}"
+}
+
+_run () {
+    host=$1 ; shift
+
+    _ssh user@$host sudo "${@}"
+}
+
+status () {
+    local nginxStatus failoverdStatus
+
+    nginxStatus=()
+    failoverdStatus=()
+
+    for host in "${hosts[@]}" ; do
+        if _run $host systemctl --quiet is-active nginx ; then
+            nginxStatus+=("active")
+        else
+            nginxStatus+=("failed")
+        fi
+
+        if _run $host systemctl --quiet is-active keepalived ; then
+            failoverdStatus+=("active")
+        else
+            failoverdStatus+=("failed")
+        fi
+    done
+
+    local index
+    index=0
+
+    while [[ $index -lt ${#hosts[@]} ]] ; do
+        printf "%d\t%s\t%s\t%s\n" $index ${hosts[$index]} ${nginxStatus[$index]} ${failoverdStatus[$index]}
+        index=$(( $index + 1 ))
+    done
+}
+
+case $cmd in
+    help)
+        help
+        ;;
+    status)
+        status
+        ;;
+    *)
+        log::error "'$cmd' is not a valid command."
+        help
+        exit 1
+esac
+
+exit 0
