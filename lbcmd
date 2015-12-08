@@ -46,7 +46,7 @@ log::cmd () {
     local ret
 
     ret=0
-    log::info "running command: $*"
+    log::debug "running command: $*"
     "$@" >&${_LOGFD} 2>&1 || ret=$?
 
     log::debug "return value was $ret"
@@ -54,7 +54,7 @@ log::cmd () {
 }
 
 log::debug () {
-    $_DEBUG || return 0
+    $DEBUG || return 0
     echo DEBUG: $* >&${_LOGFD}
     true
 }
@@ -87,7 +87,7 @@ _TEMPDIR=$(mktemp -d)
 log::debug "Temp directory is '$_TEMPDIR'..."
 
 _cleanup_tempdir () {
-    $_DEBUG && return
+    $DEBUG && return
     [[ -d "$_TEMPDIR" ]] || return 0
     rm -rf $_TEMPDIR
 }
@@ -127,17 +127,30 @@ $0 [cmd]
 Available commands are:
     - help	request this help
     - status	display load balancer status
+    - push	updating configuration on inactive load balancers
 EOF
+}
+
+is-dirty () {
+    [[ ! -z $(git status -s) ]]
 }
 
 _ssh () {
     log::cmd ssh "${@}"
 }
 
+_put () {
+    log::cmd scp "${@}"
+}
+
 _run () {
     host=$1 ; shift
 
     _ssh user@$host sudo "${@}"
+}
+
+_rsync () {
+    log::cmd rsync --rsync-path "sudo rsync" -qrlpt "${@}"
 }
 
 status () {
@@ -169,12 +182,55 @@ status () {
     done
 }
 
+init-host () {
+    if [[ ${#} -lt 1 ]] ; then
+        log::error "host must be specified"
+        return 1
+    fi
+
+    while [[ ${#} -gt 0 ]] ; do
+        local host
+        host=$1 ; shift
+
+        log::info "Initializing host $host..."
+        (cd $LBCMDDIR/remote && _rsync . user@$host:/.)
+    done
+}
+
+pushConfig () {
+    local host index
+    index=0
+
+    if is-dirty ; then
+        log::error "local configuration hasn't been committed.  refusing to push."
+
+        return 1
+    fi
+
+    # XXX - We need to make sure we don't push to the active.
+    while [[ $index -lt ${#hosts[@]} ]] ; do
+        host=${hosts[$index]}
+
+        log::info "Updating $host..."
+        _rsync --delete nginx user@$host:/etc/.
+        _rsync ssl user@$host:/etc/.
+        ./gen-keepalived-conf $index $host | _ssh user@$host "cd /etc/keepalived && sudo tee keepalived.conf > /dev/null"
+        index=$(( $index + 1))
+    done
+}
+
 case $cmd in
     help)
         help
         ;;
     status)
-        status
+        status || exit $?
+        ;;
+    push)
+        pushConfig || exit $?
+        ;;
+    init-host)
+        init-host "${@}" || exit $?
         ;;
     *)
         log::error "'$cmd' is not a valid command."
