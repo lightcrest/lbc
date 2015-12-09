@@ -102,6 +102,7 @@ if [[ ${#} -lt 1 ]] ; then
     exec bash --noprofile --rcfile $LBCMDDIR/interactive.bash -i
 fi
 
+LB_NAME="Unnamed"
 NGINX_STATUS=()
 KEEPALIVED_STATUS=()
 KEEPALIVED_STATE=()
@@ -221,6 +222,8 @@ status () {
 
     local index
     index=0
+
+    printf "Name: $LB_NAME\n\n"
 
     local fmt
     fmt="%-10s %-15s %-15s %-15s %-15s\n"
