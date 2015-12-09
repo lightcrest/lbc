@@ -332,6 +332,11 @@ promote () {
     PRIORITY[$hostIndex]=$maxPrio
 
     _write-hosts || return 1
+
+    git add hosts && git commit -q -m "Promoted $targetHost to $maxPrio."
+
+    pushConfig || return 1
+    reload || return 1
 }
 
 case $cmd in
