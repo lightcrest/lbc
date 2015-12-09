@@ -117,6 +117,13 @@ _gather-hosts () {
     done < hosts
 }
 
+_write-hosts () {
+    local i
+    for (( i=0 ; i < ${#HOSTS[@]} ; i++ )) ; do
+        printf "%s\t%s\n" ${HOSTS[$i]} ${PRIORITY[$i]}
+    done > hosts
+}
+
 # Run the requested command.
 cmd=$1 ; shift
 
@@ -266,6 +273,48 @@ pushConfig () {
     done
 }
 
+promote () {
+    if [[ ${#} -ne 1 ]] ; then
+        log::error "promote requires a single hostname"
+        return 1
+    fi
+    local targetHost
+    targetHost=$1 ; shift
+
+    update-state || return 1
+
+    if [[ $targetHost == $MASTER ]] ; then
+        log::error "you may not promote a current master"
+        return 1
+    fi
+
+    local i hostIndex maxPrio
+    hostIndex=""
+    maxPrio=-1
+
+    for (( i=0 ; i < ${#HOSTS[@]} ; i++ )) ; do
+        if [[ $targetHost == ${HOSTS[$i]} ]] ; then
+            hostIndex=$i
+        fi
+
+        if [[ ${PRIORITY[$i]} -gt $maxPrio ]] ; then
+            maxPrio=${PRIORITY[$i]}
+        fi
+    done
+
+    if [[ -z $hostIndex ]] ; then
+        log::error "couldn't find host '$targetHost'"
+        return 1
+    fi
+
+    maxPrio=$(( $maxPrio + 1 ))
+
+    log::info "promoting $targetHost to $maxPrio..."
+    PRIORITY[$hostIndex]=$maxPrio
+
+    _write-hosts || return 1
+}
+
 case $cmd in
     help)
         help
@@ -278,6 +327,9 @@ case $cmd in
         ;;
     init-host)
         init-host "${@}" || exit $?
+        ;;
+    promote)
+        promote "${@}" || exit $?
         ;;
     *)
         log::error "'$cmd' is not a valid command."

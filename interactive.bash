@@ -10,5 +10,6 @@ alias help="$LBCMD help"
 alias status="$LBCMD status"
 alias push="$LBCMD push"
 alias init-host="$LBCMD init-host"
+alias promote="$LBCMD promote"
 
 PS1="lbcmd> "
