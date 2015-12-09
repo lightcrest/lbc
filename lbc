@@ -47,7 +47,7 @@ log::cmd () {
 
     ret=0
     log::debug "running command: $*"
-    "$@" >&${_LOGFD} 2>&1 || ret=$?
+    "$@" || ret=$?
 
     log::debug "return value was $ret"
     return $ret
