@@ -273,6 +273,25 @@ pushConfig () {
     done
 }
 
+reload () {
+    local host index
+
+    update-state || return 1
+
+    for (( index=0 ; index < ${#HOSTS[@]} ; index++ )) ; do
+        host=${HOSTS[$index]}
+
+        if [[ $host == $MASTER ]] ; then
+            log::info "Skipping master $host..."
+            continue
+        fi
+
+        log::info "Reloading $host..."
+        _run $host systemctl reload nginx
+        _run $host systemctl reload keepalived
+    done
+}
+
 promote () {
     if [[ ${#} -ne 1 ]] ; then
         log::error "promote requires a single hostname"
@@ -330,6 +349,9 @@ case $cmd in
         ;;
     promote)
         promote "${@}" || exit $?
+        ;;
+    reload)
+        reload "${@}" || exit $?
         ;;
     *)
         log::error "'$cmd' is not a valid command."
