@@ -262,7 +262,7 @@ pushConfig () {
         log::info "Updating $host..."
         _rsync --delete nginx user@$host:/etc/.
         _rsync ssl user@$host:/etc/.
-        ./gen-keepalived-conf $index $host | _ssh user@$host "cd /etc/keepalived && sudo tee keepalived.conf > /dev/null"
+        ./gen-keepalived-conf ${PRIORITY[$index]} $host | _ssh user@$host "cd /etc/keepalived && sudo tee keepalived.conf > /dev/null"
     done
 }
 
