@@ -148,9 +148,12 @@ cat <<EOF
 $0 [cmd]
 
 Available commands are:
-    - help	request this help
-    - status	display load balancer status
-    - push	updating configuration on inactive load balancers
+    - help		request this help
+    - status		display load balancer status
+    - push		updating configuration on backup hosts
+    - init-host		initialize a host to work with lbc
+    - promote		update the priority of a host to become the VRRP master
+    - reload		reload configurations on backup hosts
 EOF
 }
 
