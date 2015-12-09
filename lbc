@@ -158,6 +158,7 @@ status () {
 
     nginxStatus=()
     failoverdStatus=()
+    nodeState=()
 
     for host in "${hosts[@]}" ; do
         if _run $host systemctl --quiet is-active nginx ; then
@@ -168,16 +169,27 @@ status () {
 
         if _run $host systemctl --quiet is-active keepalived ; then
             failoverdStatus+=("active")
+
+            local state
+            if ! state=$(_run $host cat /var/run/lbc/state) ; then
+                log::error "failed to obtain node state from $host"
+                log::error "result was: $state"
+                return 1
+            fi
+
         else
             failoverdStatus+=("failed")
+            state=OFFLINE
         fi
+
+        nodeState+=($state)
     done
 
     local index
     index=0
 
     while [[ $index -lt ${#hosts[@]} ]] ; do
-        printf "%d\t%s\t%s\t%s\n" $index ${hosts[$index]} ${nginxStatus[$index]} ${failoverdStatus[$index]}
+        printf "%d\t%s\t%s\t%s\t%s\n" $index ${hosts[$index]} ${nginxStatus[$index]} ${failoverdStatus[$index]} ${nodeState[$index]}
         index=$(( $index + 1 ))
     done
 }
