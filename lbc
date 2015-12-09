@@ -102,13 +102,25 @@ if [[ ${#} -lt 1 ]] ; then
     exec bash --noprofile --rcfile $LBCMDDIR/interactive.bash -i
 fi
 
+NGINX_STATUS=()
+KEEPALIVED_STATUS=()
+KEEPALIVED_STATE=()
+HOSTS=()
+PRIORITY=()
+MASTER=""
+
+_gather-hosts () {
+    local h p
+    while IFS=$'\t' read h p ; do
+        HOSTS+=($h)
+        PRIORITY+=($p)
+    done < hosts
+}
 
 # Run the requested command.
 cmd=$1 ; shift
 
 if [[ $cmd != help ]] ; then
-    hosts=()
-    active=""
 
     if [[ -f config.bash ]] ; then
         . config.bash
@@ -116,6 +128,9 @@ if [[ $cmd != help ]] ; then
         log::warning "No local configuration file found."
     fi
 
+    if [[ -f hosts ]] ; then
+        _gather-hosts
+    fi
 fi
 
 log::debug "Running '$cmd'..."
@@ -153,43 +168,59 @@ _rsync () {
     log::cmd rsync --rsync-path "sudo rsync" -qrlpt "${@}"
 }
 
-status () {
-    local nginxStatus failoverdStatus
+update-state () {
+    NGINX_STATUS=()
+    KEEPALIVED_STATUS=()
+    KEEPALIVED_STATE=()
+    MASTER=""
 
-    nginxStatus=()
-    failoverdStatus=()
-    nodeState=()
-
-    for host in "${hosts[@]}" ; do
+    local host
+    local state
+    for host in "${HOSTS[@]}" ; do
         if _run $host systemctl --quiet is-active nginx ; then
-            nginxStatus+=("active")
+            NGINX_STATUS+=("active")
         else
-            nginxStatus+=("failed")
+            NGINX_STATUS+=("failed")
         fi
 
         if _run $host systemctl --quiet is-active keepalived ; then
-            failoverdStatus+=("active")
+            KEEPALIVED_STATUS+=("active")
 
-            local state
             if ! state=$(_run $host cat /var/run/lbc/state) ; then
                 log::error "failed to obtain node state from $host"
                 log::error "result was: $state"
                 return 1
             fi
 
-        else
-            failoverdStatus+=("failed")
-            state=OFFLINE
-        fi
+            if [[ $state == MASTER ]] ; then
+                if [[ ! -z $MASTER ]] ; then
+                    log::error "multiple masters found, which should be impossible."
+                    return 1
+                fi
 
-        nodeState+=($state)
+                MASTER=$host
+            fi
+
+            KEEPALIVED_STATE+=($state)
+        else
+            KEEPALIVED_STATUS+=("failed")
+            KEEPALIVED_STATE+=OFFLINE
+        fi
     done
+}
+
+status () {
+    update-state || return 1
 
     local index
     index=0
 
-    while [[ $index -lt ${#hosts[@]} ]] ; do
-        printf "%d\t%s\t%s\t%s\t%s\n" $index ${hosts[$index]} ${nginxStatus[$index]} ${failoverdStatus[$index]} ${nodeState[$index]}
+    local fmt
+    fmt="%-10s %-15s %-15s %-15s %-15s\n"
+    printf $fmt prio host nginx keepalived state
+
+    while [[ $index -lt ${#HOSTS[@]} ]] ; do
+        printf $fmt ${PRIORITY[$index]} ${HOSTS[$index]} ${NGINX_STATUS[$index]} ${KEEPALIVED_STATUS[$index]} ${KEEPALIVED_STATE[$index]}
         index=$(( $index + 1 ))
     done
 }
