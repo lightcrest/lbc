@@ -242,23 +242,27 @@ init-host () {
 
 pushConfig () {
     local host index
-    index=0
-
     if is-dirty ; then
         log::error "local configuration hasn't been committed.  refusing to push."
 
         return 1
     fi
 
+    update-state || return 1
+
     # XXX - We need to make sure we don't push to the active.
-    while [[ $index -lt ${#hosts[@]} ]] ; do
-        host=${hosts[$index]}
+    for (( index=0 ; index < ${#HOSTS[@]} ; index++ )) ; do
+        host=${HOSTS[$index]}
+
+        if [[ $host == $MASTER ]] ; then
+            log::info "Skipping master $host..."
+            continue
+        fi
 
         log::info "Updating $host..."
         _rsync --delete nginx user@$host:/etc/.
         _rsync ssl user@$host:/etc/.
         ./gen-keepalived-conf $index $host | _ssh user@$host "cd /etc/keepalived && sudo tee keepalived.conf > /dev/null"
-        index=$(( $index + 1))
     done
 }
 
