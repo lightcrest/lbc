@@ -283,6 +283,9 @@ reload () {
 
     update-state || return 1
 
+    local status
+    status=0
+    # Reload the configuration.
     for (( index=0 ; index < ${#HOSTS[@]} ; index++ )) ; do
         host=${HOSTS[$index]}
 
@@ -292,9 +295,17 @@ reload () {
         fi
 
         log::info "Reloading $host..."
-        _run $host systemctl reload nginx
-        _run $host systemctl reload keepalived
+        # This expects systemd/init will do a configuration test
+        # before trying to reload.
+        if _run $host systemctl reload nginx ; then
+            _run $host systemctl reload keepalived
+        else
+            status=$?
+            log::error "failed to reload nginx, not reloading keepalived."
+        fi
     done
+
+    return $status
 }
 
 promote () {
