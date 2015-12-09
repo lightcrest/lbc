@@ -260,7 +260,6 @@ pushConfig () {
 
     update-state || return 1
 
-    # XXX - We need to make sure we don't push to the active.
     for (( index=0 ; index < ${#HOSTS[@]} ; index++ )) ; do
         host=${HOSTS[$index]}
 
