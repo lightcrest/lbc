@@ -239,8 +239,8 @@ status () {
     printf "Name: $LB_NAME\n\n"
 
     local fmt
-    fmt="%-10s %-15s %-15s %-15s %-15s %-15s\n"
-    printf $fmt prio host nginx keepalived state version
+    fmt="%-15s %-10s %-15s %-15s %-15s %-15s\n"
+    printf $fmt host prio nginx keepalived state version
 
     while [[ $index -lt ${#HOSTS[@]} ]] ; do
         local version
@@ -250,7 +250,7 @@ status () {
             version=$(git show -s --format="%h %s" $version) || version="Unable to parse version."
         fi
 
-        printf $fmt ${PRIORITY[$index]} ${HOSTS[$index]} ${NGINX_STATUS[$index]} ${KEEPALIVED_STATUS[$index]} ${KEEPALIVED_STATE[$index]} $version
+        printf $fmt ${HOSTS[$index]} ${PRIORITY[$index]} ${NGINX_STATUS[$index]} ${KEEPALIVED_STATUS[$index]} ${KEEPALIVED_STATE[$index]} $version
         index=$(( $index + 1 ))
     done
 }
