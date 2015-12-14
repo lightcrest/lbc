@@ -335,13 +335,24 @@ reload () {
 
     update-state || return 1
 
+    local allowMaster
+    allowMaster=false
+
+    local indices
+    if [[ ${#} -lt 1 ]] ; then
+        indices=$(seq 0 $(( ${#HOSTS[@]} - 1 )))
+    else
+        allowMaster=true
+        indices=$(_findHostIndices "${@}") || return 1
+    fi
+
     local status
     status=0
     # Reload the configuration.
-    for (( index=0 ; index < ${#HOSTS[@]} ; index++ )) ; do
+    for index in $indices ; do
         host=${HOSTS[$index]}
 
-        if [[ $host == $MASTER ]] ; then
+        if [[ $host == $MASTER && $allowMaster == false ]] ; then
             log::info "Skipping master $host..."
             continue
         fi
