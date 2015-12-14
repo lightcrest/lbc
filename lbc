@@ -247,7 +247,7 @@ status () {
         version=${VERSIONS[$index]}
 
         if [[ $version != UNKNOWN ]] ; then
-            version=$(git show -s --format="%h %s") || version="Unable to parse version."
+            version=$(git show -s --format="%h %s" $version) || version="Unable to parse version."
         fi
 
         printf $fmt ${PRIORITY[$index]} ${HOSTS[$index]} ${NGINX_STATUS[$index]} ${KEEPALIVED_STATUS[$index]} ${KEEPALIVED_STATE[$index]} $version
