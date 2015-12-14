@@ -270,6 +270,26 @@ init-host () {
     done
 }
 
+_findHostIndices () {
+    local hosts host i
+    declare -A hosts
+
+    for (( i=0 ; i < ${#HOSTS[@]} ; i++ )) ; do
+        host=${HOSTS[$i]}
+        hosts[$host]=$i
+    done
+
+    for i in "${@}" ; do
+        host=${hosts[$i]:-} || return 1
+        if [[ -z $host ]] ; then
+            log::error "couldn't find host '$i'"
+            return 1
+        fi
+
+        echo $host
+    done
+}
+
 pushConfig () {
     local host index
     if is-dirty ; then
@@ -283,10 +303,21 @@ pushConfig () {
     local version
     version=$(git show --format=%H -s) || return 1
 
-    for (( index=0 ; index < ${#HOSTS[@]} ; index++ )) ; do
+    local
+    allowMaster=false
+
+    local indices
+    if [[ ${#} -lt 1 ]] ; then
+        indices=$(seq 0 $(( ${#HOSTS[@]} - 1 )))
+    else
+        allowMaster=true
+        indices=$(_findHostIndices "${@}") || return 1
+    fi
+
+    for index in $indices ; do
         host=${HOSTS[$index]}
 
-        if [[ $host == $MASTER ]] ; then
+        if [[ $host == $MASTER && $allowMaster == false ]] ; then
             log::info "Skipping master $host..."
             continue
         fi
@@ -384,7 +415,7 @@ case $cmd in
         status || exit $?
         ;;
     push)
-        pushConfig || exit $?
+        pushConfig "${@}" || exit $?
         ;;
     init-host)
         init-host "${@}" || exit $?
