@@ -271,7 +271,10 @@ init-host () {
 }
 
 _findHostIndices () {
-    local hosts host i
+    local hosts host i allowMaster
+
+    allowMaster=false
+
     declare -A hosts
 
     for (( i=0 ; i < ${#HOSTS[@]} ; i++ )) ; do
@@ -279,14 +282,29 @@ _findHostIndices () {
         hosts[$host]=$i
     done
 
-    for i in "${@}" ; do
-        host=${hosts[$i]:-} || return 1
-        if [[ -z $host ]] ; then
-            log::error "couldn't find host '$i'"
+    local args
+
+    if [[ ${#} -lt 1 ]] ; then
+        args=(${HOSTS[@]})
+    else
+        allowMaster=true
+        args=(${@})
+    fi
+
+    local index
+    for host in "${args[@]}" ; do
+        index=${hosts[$host]:-} || return 1
+        if [[ -z $index ]] ; then
+            log::error "couldn't find host '$host'"
             return 1
         fi
 
-        echo $host
+        if [[ $host == $MASTER && $allowMaster == false ]] ; then
+            log::info "Skipping master $host..."
+            continue
+        fi
+
+        echo $index
     done
 }
 
@@ -303,24 +321,14 @@ pushConfig () {
     local version
     version=$(git show --format=%H -s) || return 1
 
-    local
+    local allowMaster
     allowMaster=false
 
     local indices
-    if [[ ${#} -lt 1 ]] ; then
-        indices=$(seq 0 $(( ${#HOSTS[@]} - 1 )))
-    else
-        allowMaster=true
-        indices=$(_findHostIndices "${@}") || return 1
-    fi
+    indices=$(_findHostIndices "${@}") || return 1
 
     for index in $indices ; do
         host=${HOSTS[$index]}
-
-        if [[ $host == $MASTER && $allowMaster == false ]] ; then
-            log::info "Skipping master $host..."
-            continue
-        fi
 
         log::info "Updating $host..."
         _rsync --delete nginx user@$host:/etc/.
@@ -339,23 +347,13 @@ reload () {
     allowMaster=false
 
     local indices
-    if [[ ${#} -lt 1 ]] ; then
-        indices=$(seq 0 $(( ${#HOSTS[@]} - 1 )))
-    else
-        allowMaster=true
-        indices=$(_findHostIndices "${@}") || return 1
-    fi
+    indices=$(_findHostIndices "${@}") || return 1
 
     local status
     status=0
     # Reload the configuration.
     for index in $indices ; do
         host=${HOSTS[$index]}
-
-        if [[ $host == $MASTER && $allowMaster == false ]] ; then
-            log::info "Skipping master $host..."
-            continue
-        fi
 
         log::info "Reloading $host..."
         # This expects systemd/init will do a configuration test
