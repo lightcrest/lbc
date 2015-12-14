@@ -111,6 +111,7 @@ PRIORITY=()
 VERSIONS=()
 MASTER=""
 
+LB_USER=$USER
 _gather-hosts () {
     local h p
     while IFS=$'\t' read h p ; do
@@ -173,7 +174,7 @@ _put () {
 _run () {
     host=$1 ; shift
 
-    _ssh user@$host sudo "${@}"
+    _ssh ${LB_USER}@$host sudo "${@}"
 }
 
 _rsync () {
@@ -266,7 +267,7 @@ init-host () {
         host=$1 ; shift
 
         log::info "Initializing host $host..."
-        (cd $LBCMDDIR/remote && _rsync . user@$host:/.)
+        (cd $LBCMDDIR/remote && _rsync . ${LB_USER}@$host:/.)
     done
 }
 
@@ -331,9 +332,9 @@ pushConfig () {
         host=${HOSTS[$index]}
 
         log::info "Updating $host..."
-        _rsync --delete nginx user@$host:/etc/.
-        _rsync ssl user@$host:/etc/.
-        ./gen-keepalived-conf ${PRIORITY[$index]} $host | _ssh user@$host "cd /etc/keepalived && sudo tee keepalived.conf > /dev/null"
+        _rsync --delete nginx ${LB_USER}@$host:/etc/.
+        _rsync ssl ${LB_USER}@$host:/etc/.
+        ./gen-keepalived-conf ${PRIORITY[$index]} $host | _ssh ${LB_USER}@$host "cd /etc/keepalived && sudo tee keepalived.conf > /dev/null"
         echo $version | _run $host tee /etc/lbc/version > /dev/null
     done
 }
