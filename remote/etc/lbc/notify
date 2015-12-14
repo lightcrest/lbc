@@ -1,0 +1,4 @@
+#!/bin/bash
+
+mkdir -p /var/run/lbc
+echo "$3" > /var/run/lbc/state
