@@ -108,6 +108,7 @@ KEEPALIVED_STATUS=()
 KEEPALIVED_STATE=()
 HOSTS=()
 PRIORITY=()
+VERSIONS=()
 MASTER=""
 
 _gather-hosts () {
@@ -183,6 +184,7 @@ update-state () {
     NGINX_STATUS=()
     KEEPALIVED_STATUS=()
     KEEPALIVED_STATE=()
+    VERSIONS=()
     MASTER=""
 
     local host
@@ -217,6 +219,14 @@ update-state () {
             KEEPALIVED_STATUS+=("failed")
             KEEPALIVED_STATE+=OFFLINE
         fi
+
+        local version
+        if version=$(_run $host cat /etc/lbc/version 2>/dev/null) ; then
+            VERSIONS+=($version)
+        else
+            VERSIONS+=(UNKNOWN)
+        fi
+
     done
 }
 
@@ -229,11 +239,18 @@ status () {
     printf "Name: $LB_NAME\n\n"
 
     local fmt
-    fmt="%-10s %-15s %-15s %-15s %-15s\n"
-    printf $fmt prio host nginx keepalived state
+    fmt="%-10s %-15s %-15s %-15s %-15s %-15s\n"
+    printf $fmt prio host nginx keepalived state version
 
     while [[ $index -lt ${#HOSTS[@]} ]] ; do
-        printf $fmt ${PRIORITY[$index]} ${HOSTS[$index]} ${NGINX_STATUS[$index]} ${KEEPALIVED_STATUS[$index]} ${KEEPALIVED_STATE[$index]}
+        local version
+        version=${VERSIONS[$index]}
+
+        if [[ $version != UNKNOWN ]] ; then
+            version=$(git show -s --format="%h %s") || version="Unable to parse version."
+        fi
+
+        printf $fmt ${PRIORITY[$index]} ${HOSTS[$index]} ${NGINX_STATUS[$index]} ${KEEPALIVED_STATUS[$index]} ${KEEPALIVED_STATE[$index]} $version
         index=$(( $index + 1 ))
     done
 }
@@ -263,6 +280,9 @@ pushConfig () {
 
     update-state || return 1
 
+    local version
+    version=$(git show --format=%H -s) || return 1
+
     for (( index=0 ; index < ${#HOSTS[@]} ; index++ )) ; do
         host=${HOSTS[$index]}
 
@@ -275,6 +295,7 @@ pushConfig () {
         _rsync --delete nginx user@$host:/etc/.
         _rsync ssl user@$host:/etc/.
         ./gen-keepalived-conf ${PRIORITY[$index]} $host | _ssh user@$host "cd /etc/keepalived && sudo tee keepalived.conf > /dev/null"
+        echo $version | _run $host tee /etc/lbc/version > /dev/null
     done
 }
 
