@@ -361,7 +361,9 @@ reload () {
         # This expects systemd/init will do a configuration test
         # before trying to reload.
         if _run $host systemctl reload nginx ; then
-            _run $host systemctl reload keepalived
+            if ! _run $host systemctl reload keepalived ; then
+                log::error "failed to reload keepalived."
+            fi
         else
             status=$?
             log::error "failed to reload nginx, not reloading keepalived."
@@ -412,7 +414,7 @@ promote () {
 
     _write-hosts || return 1
 
-    git add hosts && git commit -q -m "Promoted $targetHost to $maxPrio."
+    git add hosts && git commit -q -m "Promoted $targetHost to $maxPrio." || return 1
 
     pushConfig || return 1
     reload || return 1
@@ -445,7 +447,7 @@ add-host () {
         return 1
     fi
 
-    git add hosts && git commit -m "Added host $host at $priority."
+    git add hosts && git commit -m "Added host $host at $priority." || return 1
     init-host $host || return 1
     pushConfig $host || return 1
     reload $host || return 1
