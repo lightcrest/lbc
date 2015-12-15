@@ -156,6 +156,7 @@ Available commands are:
     - init-host		initialize a host to work with lbc
     - promote		update the priority of a host to become the VRRP master
     - reload		reload configurations on backup hosts
+    - add-host		add a host
 EOF
 }
 
@@ -417,6 +418,39 @@ promote () {
     reload || return 1
 }
 
+add-host () {
+    if [[ ${#} -ne 2 ]] ; then
+        log::error "add-host expects the host and initial priority"
+        return 1
+    fi
+
+    local host priority
+
+    host=$1 ; shift
+    priority=$1 ; shift
+
+    local i
+    for (( i=0 ; i < ${#PRIORITY[@]} ; i++ )) ; do
+        if [[ ${PRIORITY[$i]} -eq $priority ]] ; then
+            log::error "a host with that priority already exists"
+            return 1
+        fi
+    done
+
+    HOSTS+=($host)
+    PRIORITY+=($priority)
+
+    if ! _write-hosts ; then
+        log::error "failed to write new host"
+        return 1
+    fi
+
+    git add hosts && git commit -m "Added host $host at $priority."
+    init-host $host || return 1
+    pushConfig $host || return 1
+    reload $host || return 1
+}
+
 case $cmd in
     help)
         help
@@ -435,6 +469,9 @@ case $cmd in
         ;;
     reload)
         reload "${@}" || exit $?
+        ;;
+    add-host)
+        add-host "${@}" || exit $?
         ;;
     *)
         log::error "'$cmd' is not a valid command."
