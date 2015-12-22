@@ -156,6 +156,7 @@ Available commands are:
     - init-host		initialize a host to work with lbc
     - promote		update the priority of a host to become the VRRP master
     - reload		reload configurations on backup hosts
+    - restart		restart daemons on backup hosts
     - add-host		add a host
 EOF
 }
@@ -339,7 +340,10 @@ pushConfig () {
     done
 }
 
-reload () {
+_pokeDaemons () {
+    local cmd
+    cmd=$1 ; shift
+
     local host index
 
     update-state || return 1
@@ -352,24 +356,32 @@ reload () {
 
     local status
     status=0
-    # Reload the configuration.
+
     for index in $indices ; do
         host=${HOSTS[$index]}
 
-        log::info "Reloading $host..."
+        log::info "${cmd}ing $host..."
         # This expects systemd/init will do a configuration test
         # before trying to reload.
-        if _run $host systemctl reload nginx ; then
-            if ! _run $host systemctl reload keepalived ; then
-                log::error "failed to reload keepalived."
+        if _run $host systemctl $cmd nginx ; then
+            if ! _run $host systemctl $cmd keepalived ; then
+                log::error "failed to $cmd keepalived."
             fi
         else
             status=$?
-            log::error "failed to reload nginx, not reloading keepalived."
+            log::error "failed to $cmd nginx, not ${cmd}ing keepalived."
         fi
     done
 
     return $status
+}
+
+reload () {
+    _pokeDaemons reload "${@}"
+}
+
+restart () {
+    _pokeDaemons restart "${@}"
 }
 
 promote () {
@@ -470,6 +482,9 @@ case $cmd in
         ;;
     reload)
         reload "${@}" || exit $?
+        ;;
+    restart)
+        restart "${@}" || exit $?
         ;;
     add-host)
         add-host "${@}" || exit $?
