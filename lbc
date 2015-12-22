@@ -60,7 +60,7 @@ log::debug () {
 }
 
 log::warning () {
-    echo ERROR: $* >&${_LOGFD}
+    echo WARNING: $* >&${_LOGFD}
 }
 
 log::error () {
