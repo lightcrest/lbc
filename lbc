@@ -201,10 +201,9 @@ update-state () {
         if _run $host systemctl --quiet is-active keepalived ; then
             KEEPALIVED_STATUS+=("active")
 
-            if ! state=$(_run $host cat /var/run/lbc/state) ; then
-                log::error "failed to obtain node state from $host"
-                log::error "result was: $state"
-                return 1
+            if ! state=$(_run $host cat /var/run/lbc/state 2> /dev/null) ; then
+                log::warning "failed to obtain node state from $host"
+                state=UNKNOWN
             fi
 
             if [[ $state == MASTER ]] ; then
