@@ -462,7 +462,7 @@ add-host () {
     git add hosts && git commit -m "Added host $host at $priority." || return 1
     init-host $host || return 1
     pushConfig $host || return 1
-    reload $host || return 1
+    restart $host || return 1
 }
 
 case $cmd in
