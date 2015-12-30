@@ -219,7 +219,7 @@ update-state () {
             KEEPALIVED_STATE+=($state)
         else
             KEEPALIVED_STATUS+=("failed")
-            KEEPALIVED_STATE+=OFFLINE
+            KEEPALIVED_STATE+=("OFFLINE")
         fi
 
         local version
