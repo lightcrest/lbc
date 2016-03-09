@@ -13,6 +13,7 @@ Setting Up A Cluster
 - ssh
 - keepalived
 - nginx
+- sudo
 
 1) Create a new git repository to hold the configuration for the cluster.
 
@@ -76,10 +77,12 @@ Setting Up A Cluster
     }
     EOF
 
-6) Run ```lbc```.  You will be given the interactive control shell.
+6) Specify a user in config.bash, that same user should be added to each LB instance with full sudo privileges.
 
-7) For each host, run ```init-host $hostname```.
+7) Run ```lbc```.  You will be given the interactive control shell.
 
-8) Run ```status``` and verify the state of the hosts in the load balancer cluster.
+8) For each host, run ```init-host $hostname```.
 
-9) Examine the output of ```help``` for available commands.
+9) Run ```status``` and verify the state of the hosts in the load balancer cluster.
+
+10) Examine the output of ```help``` for available commands.
