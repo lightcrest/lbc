@@ -81,8 +81,11 @@ Setting Up A Cluster
 
 7) Run ```lbc```.  You will be given the interactive control shell.
 
-8) For each host, run ```init-host $hostname```.
+8) add each host with associated priority with the ```add-host $host $priority``` command, i.e.
+   lbc> add-host 10.0.0.15 0
+   lbc> add-host 10.0.0.16 1
+9) For each host, run ```init-host $hostname```.
 
-9) Run ```status``` and verify the state of the hosts in the load balancer cluster.
+10) Run ```status``` and verify the state of the hosts in the load balancer cluster.
 
-10) Examine the output of ```help``` for available commands.
+11) Examine the output of ```help``` for available commands.
