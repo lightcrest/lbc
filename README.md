@@ -82,8 +82,8 @@ Setting Up A Cluster
 7) Run ```lbc```.  You will be given the interactive control shell.
 
 8) add each host with associated priority with the ```add-host $host $priority``` command, i.e.
-   lbc> add-host 10.0.0.15 0
-   lbc> add-host 10.0.0.16 1
+        lbc> add-host 10.0.0.15 0
+        lbc> add-host 10.0.0.16 1
    
 9) For each host, run ```init-host $hostname```.
 
