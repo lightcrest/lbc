@@ -17,20 +17,11 @@ Setting Up A Cluster
 
 1) Create a new git repository to hold the configuration for the cluster.
 
-2) Create a hosts file that defines what hosts are part of the cluster:
+2) Copy the nginx configuration into the git repository.  Everything under ```nginx``` will be placed in ```/etc/nginx/``` on the load balancer. Note: the nginx config will be rsync'ed with a --delete option.
 
-    cat > hosts << EOF
-    10.0.0.15	0
-    10.0.0.16	1
-    EOF
+3) Copy the ssl configuration into the git repostory.  This will be overlayed into ```/etc/ssl```.  No files will be deleted.
 
-... priority is in the right column.  Order the hosts with the highest priority being the default master.
-
-3) Copy the nginx configuration into the git repository.  Everything under ```nginx``` will be placed in ```/etc/nginx/``` on the load balancer. Note: the nginx config will be rsync'ed with a --delete option.
-
-4) Copy the ssl configuration into the git repostory.  This will be overlayed into ```/etc/ssl```.  No files will be deleted.
-
-5) Create a ```keepalived``` config generator, and commit it to the git repository.  A typical example would be:
+4) Create a ```keepalived``` config generator, and commit it to the git repository.  A typical example would be:
 
     cat > gen-keepalived-conf <<EOF
     #!/bin/bash
@@ -77,17 +68,17 @@ Setting Up A Cluster
     }
     EOF
 
-6) Specify a user in config.bash, that same user should be added to each LB instance with full sudo privileges.
+5) Specify a user in config.bash, that same user should be added to each LB instance with full sudo privileges.
 
-7) Run ```lbc```.  You will be given the interactive control shell.
+6) Run ```lbc```.  You will be given the interactive control shell.
 
-8) add each host with associated priority with the ```add-host $host $priority``` command, i.e:
+7) add each host with associated priority with the ```add-host $host $priority``` command, i.e:
 
         lbc> add-host 10.0.0.15 0
         lbc> add-host 10.0.0.16 1
    
-9) For each host, run ```init-host $hostname```.
+8) For each host, run ```init-host $hostname```.
 
-10) Run ```status``` and verify the state of the hosts in the load balancer cluster.
+9) Run ```status``` and verify the state of the hosts in the load balancer cluster.
 
-11) Examine the output of ```help``` for available commands.
+10) Examine the output of ```help``` for available commands.
