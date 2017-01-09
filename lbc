@@ -152,12 +152,18 @@ $0 [cmd]
 Available commands are:
     - help		request this help
     - status		display load balancer status
-    - push		updating configuration on backup hosts
     - init-host		initialize a host to work with lbc
-    - promote		update the priority of a host to become the VRRP master
-    - reload		reload configurations on backup hosts
-    - restart		restart daemons on backup hosts
     - add-host		add a host
+    - promote		update the priority of a host to become the VRRP master
+    - reload		reload configurations on host(s)
+    - restart		restart daemons on host(s)
+    - push		push configuration to host(s)
+
+By default, reload, restart, and push operate only on the current
+backup hosts, not the active master.  You may pass hostnames as
+arguments to these commands if you'd like to override this behavior
+(e.g. to push config to the active master).
+
 EOF
 }
 
