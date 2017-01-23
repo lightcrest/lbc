@@ -274,6 +274,7 @@ init-host () {
         host=$1 ; shift
 
         log::info "Initializing host $host..."
+        _run $host apt-get update
         _run $host apt-get -y install rsync keepalived nginx-extras
         (cd $LBCMDDIR/remote && _rsync . ${LB_USER}@$host:/.)
     done
