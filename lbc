@@ -102,6 +102,7 @@ if [[ ${#} -lt 1 ]] ; then
     exec bash --noprofile --rcfile $LBCMDDIR/interactive.bash -i
 fi
 
+LB_PACKAGES="rsync keepalived nginx-extras"
 LB_NAME="Unnamed"
 NGINX_STATUS=()
 KEEPALIVED_STATUS=()
@@ -275,7 +276,7 @@ init-host () {
 
         log::info "Initializing host $host..."
         _run $host apt-get update
-        _run $host apt-get -y install rsync keepalived nginx-extras
+        _run $host apt-get -y install ${LB_PACKAGES}
         (cd $LBCMDDIR/remote && _rsync . ${LB_USER}@$host:/.)
     done
 }
