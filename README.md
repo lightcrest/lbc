@@ -68,7 +68,17 @@ Setting Up A Cluster
     }
     EOF
 
-5) Specify a user in config.bash, that same user should be added to each LB instance with full sudo privileges.
+5) Specify a configuration:
+
+   - LB_USER
+     The user to SSH to the load balancer hosts as.  This user must have "no password" sudo privileges.
+
+   - LB_NAME
+     The name of the load balancer cluster.
+
+   - LB_PACKAGES
+     A list of packages to be installed on load balancer hosts when initialized.  This has a sane default.
+     If overridden, rsync, keepalived, and some version of nginx must be included.
 
 6) Run ```lbc```.  You will be given the interactive control shell.
 
