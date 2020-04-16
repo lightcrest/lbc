@@ -22,7 +22,7 @@ Setting Up A Cluster
 3) Copy the ssl configuration into the git repostory.  This will be overlayed into ```/etc/ssl```.  No files will be deleted.
 
 4) Create a ```keepalived``` config generator, and commit it to the git repository.  A typical example would be:
-
+```
     cat > gen-keepalived-conf <<EOF
     #!/bin/bash
 
@@ -67,6 +67,7 @@ Setting Up A Cluster
         notify "/etc/lbc/notify"
     }
     EOF
+```
 
 5) Specify a configuration:
 
